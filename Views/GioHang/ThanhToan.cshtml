@@ -1,0 +1,345 @@
+@model List<MiniStopWeb.Models.CartItem>
+
+@{
+    ViewData["Title"] = "Thanh toán đơn hàng - MiniStop";
+    
+    decimal phiTamTinh = 0;
+    if (ViewBag.PhiTamTinh != null) 
+    { 
+        phiTamTinh = Convert.ToDecimal(ViewBag.PhiTamTinh); 
+    }
+}
+
+<style>
+    body { background-color: #f4f5f6; }
+    .checkout-box { background: #0e0e0e; border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .section-title { font-size: 1.1rem; font-weight: 800; color: #1c1c1c; margin-bottom: 16px; }
+    
+    .option-card { border: 2px solid #eee; border-radius: 12px; padding: 16px; cursor: pointer; transition: 0.2s; }
+    .option-card:hover { border-color: #00b14f; background-color: #f2fbf6; }
+    .form-check-input:checked + .option-card { border-color: #00b14f; background-color: #f2fbf6; }
+    .form-check-input { display: none; } 
+    
+    .price-row { display: flex; justify-content: space-between; margin-bottom: 12px; color: #555; }
+    .price-total { display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: 800; color: #e31837; border-top: 2px dashed #eee; padding-top: 16px; margin-top: 16px; }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <form id="frmThanhToan" action="/GioHang/XuLyThanhToan" method="post">
+                
+                <div class="checkout-box">
+                    <div class="section-title"><i class="fa-solid fa-location-dot text-danger me-2"></i>Địa chỉ giao hàng</div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control rounded-3" name="TenNguoiNhan" placeholder="Tên người nhận" required>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control rounded-3" name="SoDienThoai" placeholder="Số điện thoại" required>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <select class="form-select rounded-3" id="tinh" disabled required style="background-color: #e9ecef; font-weight: bold;">
+                                <option value="79" data-name="Hồ Chí Minh" selected>Hồ Chí Minh</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select rounded-3" id="quan" required>
+                                <option value="">Chọn Quận/Huyện</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select rounded-3" id="phuong" disabled required>
+                                <option value="">Chọn Phường/Xã</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <input type="text" class="form-control rounded-3" id="soNha" placeholder="Số nhà, Tên đường..." required>
+                            <input type="hidden" id="diaChiHoanChinh" name="DiaChi">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkout-box">
+                    <div class="section-title"><i class="fa-solid fa-motorcycle text-success me-2"></i>Tùy chọn giao hàng</div>
+                    
+                    <label class="d-block mb-3">
+                        <input type="radio" name="PhiShip" value="15000" class="form-check-input ship-option" id="radioTietKiem" checked>
+                        <div class="option-card d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-1">Giao hàng Tiết Kiệm</h6>
+                                <small class="text-muted" id="timeTietKiem">Vui lòng nhập đầy đủ địa chỉ...</small>
+                            </div>
+                            <div class="fw-bold text-secondary" id="priceTietKiem">15.000đ</div>
+                        </div>
+                    </label>
+
+                    <label class="d-block mb-3">
+                        <input type="radio" name="PhiShip" value="25000" class="form-check-input ship-option" id="radioNhanh">
+                        <div class="option-card d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-1">Giao hàng Nhanh <span class="badge bg-warning text-dark ms-1">Khuyên dùng</span></h6>
+                                <small class="text-muted" id="timeNhanh">Vui lòng nhập đầy đủ địa chỉ...</small>
+                            </div>
+                            <div class="fw-bold text-success" id="priceNhanh">25.000đ</div>
+                        </div>
+                    </label>
+
+                    <label class="d-block mb-2">
+                        <input type="radio" name="PhiShip" value="35000" class="form-check-input ship-option" id="radioUuTien">
+                        <div class="option-card d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-1 text-danger"><i class="fa-solid fa-bolt me-1"></i>Giao hàng Ưu Tiên</h6>
+                                <small class="text-muted" id="timeUuTien">Vui lòng nhập đầy đủ địa chỉ...</small>
+                            </div>
+                            <div class="fw-bold text-danger" id="priceUuTien">35.000đ</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="checkout-box">
+                    <div class="section-title"><i class="fa-solid fa-wallet text-primary me-2"></i>Phương thức thanh toán</div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="d-block">
+                                <input type="radio" name="PhuongThucTT" value="COD" class="form-check-input" checked>
+                                <div class="option-card text-center py-3">
+                                    <i class="fa-solid fa-money-bill-wave text-success fs-3 mb-2"></i>
+                                    <h6 class="fw-bold mb-0">Tiền mặt (COD)</h6>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="d-block">
+                                <input type="radio" name="PhuongThucTT" value="MOMO" class="form-check-input">
+                                <div class="option-card text-center py-3">
+                                    <img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" height="32" class="mb-2" style="object-fit: contain;">
+                                    <h6 class="fw-bold mb-0">Ví điện tử MoMo</h6>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" form="frmThanhToan" class="btn w-100 fw-bold py-3 text-white mt-4" style="background-color: #00b14f; border-radius: 12px; font-size: 1.1rem; display: none;" id="btnMobile">
+                    ĐẶT ĐƠN NGAY
+                </button>
+            </form>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="checkout-box position-sticky" style="top: 90px;">
+                <div class="section-title">Chi tiết thanh toán</div>
+                
+                <div class="price-row">
+                    <span>Phí tạm tính</span>
+                    <span class="fw-bold">@string.Format("{0:N0}", phiTamTinh)đ</span>
+                </div>
+                
+                <div class="price-row">
+                    <span>Phí giao hàng</span>
+                    <span class="fw-bold" id="txtPhiShip">15.000đ</span>
+                </div>
+                
+                <div class="price-row">
+                    <span>Phí nền tảng <i class="fa-solid fa-circle-info small ms-1 text-muted"></i></span>
+                    <span class="fw-bold">2.000đ</span>
+                </div>
+
+                <div class="price-total">
+                    <span>Tổng cộng</span>
+                    <span id="txtTongTien">@string.Format("{0:N0}", phiTamTinh + 15000 + 2000) đ</span>
+                </div>
+
+                <button type="submit" form="frmThanhToan" class="btn w-100 fw-bold py-3 text-white mt-4" style="background-color: #00b14f; border-radius: 12px; font-size: 1.1rem;">
+                    ĐẶT ĐƠN NGAY
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ==========================================
+        // KHỞI TẠO BIẾN CƠ BẢN
+        // ==========================================
+        let phiTamTinh = @Html.Raw(phiTamTinh.ToString("0"));
+        let phiNenTang = 2000;
+        let currentKm = 0;
+
+        document.querySelectorAll('.ship-option').forEach(radio => {
+            radio.addEventListener('change', capNhatTongTien);
+        });
+
+        // ==========================================
+        // TÍCH HỢP BẢN ĐỒ: TÍNH KHOẢNG CÁCH, THỜI GIAN & PHÍ SHIP
+        // ==========================================
+        
+        function formatTime(minutes) {
+            if (minutes < 60) return `${minutes} phút`;
+            let h = Math.floor(minutes / 60);
+            let m = minutes % 60;
+            return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`;
+        }
+
+        function tinhKhoangCachVaShip(diaChiKhach) {
+            let quan = document.getElementById('quan');
+            let tenQuan = quan.value ? quan.options[quan.selectedIndex].getAttribute('data-name') : '';
+
+            // TẠO THUẬT TOÁN "BĂM CHUỖI" (HASHING) ĐỂ CỐ ĐỊNH SỐ KM
+            // 1. Chuyển tất cả về chữ thường để "Hồ Văn Long" và "hồ văn long" đều ra chung 1 kết quả
+            let str = diaChiKhach.toLowerCase().trim();
+            let hash = 0;
+            // 2. Tính toán mã băm từ các chữ cái
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            // 3. Biến mã băm thành một số thập phân (từ 0.00 đến 0.99) cực kỳ ổn định
+            let seededRandom = Math.abs(hash % 100) / 100; 
+
+            setTimeout(() => {
+                let distanceKm = 5.0; 
+
+                // Thay thế Math.random() bằng seededRandom
+                // Giờ đây cùng 1 địa chỉ sẽ LUÔN LUÔN cho ra 1 con số Km duy nhất!
+                if (tenQuan.includes("12") || tenQuan.includes("Hóc Môn")) {
+                    distanceKm = (seededRandom * 2 + 1).toFixed(1); 
+                } else if (tenQuan.includes("Tân Bình") || tenQuan.includes("Gò Vấp") || tenQuan.includes("Tân Phú")) {
+                    distanceKm = (seededRandom * 4 + 4).toFixed(1); 
+                } else if (tenQuan.includes("Quận 1") || tenQuan.includes("Quận 3") || tenQuan.includes("Bình Tân") || tenQuan.includes("Quận 10")) {
+                    distanceKm = (seededRandom * 5 + 9).toFixed(1); 
+                } else {
+                    distanceKm = (seededRandom * 10 + 12).toFixed(1); 
+                }
+
+                let durationMin = Math.ceil(distanceKm * 3.5);
+                currentKm = parseFloat(distanceKm);
+
+                let phiTietKiem = 15000;
+                if (distanceKm > 3) phiTietKiem += Math.ceil(distanceKm - 3) * 5000;
+                
+                let phiNhanh = phiTietKiem + 10000;  
+                let phiUuTien = phiTietKiem + 25000; 
+
+                apDungPhiShip(distanceKm, durationMin, phiTietKiem, phiNhanh, phiUuTien);
+            }, 600); 
+        }
+
+        function apDungPhiShip(soKm, phut, phiTietKiem, phiNhanh, phiUuTien) {
+            document.getElementById('radioTietKiem').value = phiTietKiem;
+            document.getElementById('radioNhanh').value = phiNhanh;
+            document.getElementById('radioUuTien').value = phiUuTien;
+
+            document.getElementById('priceTietKiem').innerText = phiTietKiem.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('priceNhanh').innerText = phiNhanh.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('priceUuTien').innerText = phiUuTien.toLocaleString('vi-VN') + 'đ';
+
+            if (phut > 0) {
+                let timeGoc = phut + 10; 
+                
+                let minUuTien = timeGoc, maxUuTien = timeGoc + 5;
+                let minNhanh = timeGoc + 15, maxNhanh = timeGoc + 20;
+                let minTietKiem = timeGoc + 35, maxTietKiem = timeGoc + 50;
+
+                document.getElementById('timeUuTien').innerText = `Dự kiến: ${formatTime(minUuTien)} - ${formatTime(maxUuTien)}`;
+                document.getElementById('timeNhanh').innerText = `Dự kiến: ${formatTime(minNhanh)} - ${formatTime(maxNhanh)}`;
+                document.getElementById('timeTietKiem').innerText = `Dự kiến: ${formatTime(minTietKiem)} - ${formatTime(maxTietKiem)}`;
+            } else {
+                document.getElementById('timeUuTien').innerText = `Không thể tính thời gian.`;
+                document.getElementById('timeNhanh').innerText = `Không thể tính thời gian.`;
+                document.getElementById('timeTietKiem').innerText = `Không thể tính thời gian.`;
+            }
+
+            document.getElementById('radioNhanh').checked = true;
+            capNhatTongTien();
+        }
+
+        function capNhatTongTien() {
+            let selectedRadio = document.querySelector('input[name="PhiShip"]:checked');
+            if (selectedRadio) {
+                let phiShipHienTai = parseInt(selectedRadio.value);
+                
+                let textHienThi = currentKm > 0 ? `${currentKm} km (${phiShipHienTai.toLocaleString('vi-VN')}đ)` : `${phiShipHienTai.toLocaleString('vi-VN')}đ`;
+                document.getElementById('txtPhiShip').innerText = textHienThi;
+
+                let tongTienMoi = phiTamTinh + phiNenTang + phiShipHienTai;
+                document.getElementById('txtTongTien').innerText = tongTienMoi.toLocaleString('vi-VN') + ' đ';
+            }
+        }
+
+        // ==========================================
+        // API TẢI QUẬN/HUYỆN (MẶC ĐỊNH HỒ CHÍ MINH)
+        // ==========================================
+        const apiTinhThanh = "https://esgoo.net/api-tinhthanh";
+        const hcmId = "79"; 
+        
+        fetch(`${apiTinhThanh}/2/${hcmId}.htm`).then(r => r.json()).then(data => {
+            if (data.error === 0) {
+                let selectQuan = document.getElementById('quan');
+                data.data.forEach(item => {
+                    let option = new Option(item.full_name, item.id);
+                    option.setAttribute('data-name', item.full_name);
+                    selectQuan.add(option);
+                });
+            }
+        });
+
+        document.getElementById('quan').addEventListener('change', function() {
+            let idQuan = this.value;
+            let selectPhuong = document.getElementById('phuong');
+            
+            selectPhuong.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+
+            if (idQuan) {
+                selectPhuong.disabled = false;
+                fetch(`${apiTinhThanh}/3/${idQuan}.htm`).then(r => r.json()).then(data => {
+                    if (data.error === 0) {
+                        data.data.forEach(item => {
+                            let option = new Option(item.full_name, item.id);
+                            option.setAttribute('data-name', item.full_name);
+                            selectPhuong.add(option);
+                        });
+                    }
+                });
+            } else { selectPhuong.disabled = true; }
+            KiemTraVaGoiBanDo();
+        });
+
+        document.getElementById('phuong').addEventListener('change', KiemTraVaGoiBanDo);
+        document.getElementById('soNha').addEventListener('blur', KiemTraVaGoiBanDo); 
+
+        function KiemTraVaGoiBanDo() {
+            let quan = document.getElementById('quan');
+            let phuong = document.getElementById('phuong');
+            let soNha = document.getElementById('soNha').value;
+
+            // Regex kiểm tra tiếng Việt có dấu cơ bản (bao gồm các nguyên âm có dấu)
+            // Nếu không có các ký tự này, coi như là không dấu
+            const regexVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
+            if (soNha.length > 0 && !regexVietnamese.test(soNha)) {
+                document.getElementById('soNha').setCustomValidity("Vui lòng nhập tên đường có dấu tiếng Việt (Ví dụ: Hồ Văn Long)");
+                document.getElementById('soNha').reportValidity();
+                return; // Ngừng lại, không cho tính toán
+            } else {
+                document.getElementById('soNha').setCustomValidity(""); // Hợp lệ
+            }
+
+            let tenTinh = "Hồ Chí Minh";
+            let tenQuan = quan.value ? quan.options[quan.selectedIndex].getAttribute('data-name') : '';
+            let tenPhuong = phuong.value ? phuong.options[phuong.selectedIndex].getAttribute('data-name') : '';
+
+            let diaChiDayDu = [soNha, tenPhuong, tenQuan, tenTinh].filter(Boolean).join(', ');
+            document.getElementById('diaChiHoanChinh').value = diaChiDayDu;
+            
+            if (tenQuan && tenPhuong && soNha) {
+                document.getElementById('txtPhiShip').innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span> Đang tính...';
+                tinhKhoangCachVaShip(diaChiDayDu);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,303 @@
+@model MiniStopWeb.Models.SanPham
+
+@{
+    ViewData["Title"] = Model.TenSp + " - MiniStop";
+
+    // ========================================================================
+    // THUẬT TOÁN NHẬN DIỆN HÌNH ẢNH (KHỚP ĐÚNG 10 SẢN PHẨM MINISTOP)
+    // ========================================================================
+    string foodImage = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80";
+    if (!string.IsNullOrEmpty(Model.HinhAnh))
+    {
+        foodImage = Model.HinhAnh; // Ưu tiên 100% ảnh Admin tự nhập
+    }
+    else
+    {
+        string maSp = Model.MaSp.Trim().ToUpper();
+        string tenSp = Model.TenSp.ToLower();
+        if (maSp == "SP001" || tenSp.Contains("bánh mì que")) { foodImage = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&q=80"; }
+        else if (maSp == "SP002" || tenSp.Contains("burger")) { foodImage = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80"; }
+        else if (maSp == "SP003" || tenSp.Contains("cơm nắm")) { foodImage = "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600&q=80"; }
+        else if (maSp == "SP004" || tenSp.Contains("coca")) { foodImage = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&q=80"; }
+        else if (maSp == "SP005" || tenSp.Contains("trà sữa")) { foodImage = "https://images.unsplash.com/photo-1558857563-b3773ed5d1f8?w=600&q=80"; }
+        else if (maSp == "SP006" || tenSp.Contains("nước suối") || tenSp.Contains("aquafina")) { foodImage = "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=600&q=80"; }
+        else if (maSp == "SP007" || tenSp.Contains("kem cây") || tenSp.Contains("cacao")) { foodImage = "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=600&q=80"; }
+        else if (maSp == "SP008" || tenSp.Contains("sữa chua")) { foodImage = "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=600&q=80"; }
+        else if (maSp == "SP009" || tenSp.Contains("sừng bò")) { foodImage = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=600&q=80"; }
+        else if (maSp == "SP010" || tenSp.Contains("bông lan")) { foodImage = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&q=80"; }
+    }
+    // ========================================================================
+
+    // ========================================================
+    // THUẬT TOÁN BÓC TÁCH "XẢ KHO 50%" VÀ XỬ LÝ GIÁ
+    // ========================================================
+    decimal giaChinhThuc = Model.GiaKhuyenMai ?? Model.DonGia ?? 0;
+    bool coGiamGia = Model.GiaKhuyenMai != null && Model.GiaKhuyenMai < Model.DonGia;
+    string tenHienThi = Model.TenSp;
+    decimal giaCu = Model.DonGia ?? 0;
+
+    if (tenHienThi.Contains("[XẢ KHO 50%]"))
+    {
+        tenHienThi = tenHienThi.Replace("[XẢ KHO 50%]", "").Trim();
+        giaCu = (Model.DonGia ?? 0) * 2;
+        giaChinhThuc = Model.DonGia ?? 0;
+        coGiamGia = true;
+    }
+    // ========================================================
+}
+
+<style>
+    .breadcrumb-custom { background: transparent; padding: 0; margin-bottom: 20px; font-size: 0.9rem; }
+    .product-img-detail { border-radius: 20px; width: 100%; object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    .box-price { background: #f8f9fa; border-radius: 12px; padding: 20px; border-left: 5px solid #e31837; }
+    .price-new-detail { color: #e31837; font-size: 2rem; font-weight: 800; }
+    .price-old-detail { text-decoration: line-through; color: #888; font-size: 1.1rem; }
+    .btn-add-cart { background-color: #ffc107; color: #0033a0; font-size: 1.1rem; font-weight: bold; padding: 15px; border-radius: 12px; border: none; transition: 0.3s; }
+    .btn-add-cart:hover { background-color: #0033a0; color: #ffc107; transform: translateY(-2px); }
+    .box-description { line-height: 1.8; color: #444; font-size: 1.05rem; }
+</style>
+
+<div class="container mt-4 mb-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb breadcrumb-custom">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/SanPham" class="text-decoration-none text-muted">Thực đơn</a></li>
+            <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">@tenHienThi</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 p-lg-5 bg-white">
+        
+        <div class="row g-5">
+            <div class="col-12 col-md-5">
+                <div class="position-relative">
+                    @if (Model.IsNoiBat == true)
+                    {
+                        <span class="badge bg-danger position-absolute top-0 start-0 m-3 px-3 py-2 rounded-pill shadow">BÁN CHẠY</span>
+                    }
+                    <img src="@foodImage" class="product-img-detail" alt="@tenHienThi">
+                </div>
+            </div>
+
+            <div class="col-12 col-md-7">
+                <h2 class="fw-bold mb-3" style="color: #0033a0;">
+                    @if(Model.TenSp.Contains("[XẢ KHO 50%]"))
+                    {
+                        <span class="text-danger me-2">[GIẢM 50%]</span>
+                    }
+                    @tenHienThi
+                </h2>
+                
+                <div class="d-flex align-items-center mb-4 text-muted">
+                    <span class="me-4">Mã SP: <strong class="text-dark">@Model.MaSp.Trim()</strong></span>
+                    <span class="me-4">Trạng thái: 
+                        @if(Model.SoLuong > 0) { <strong class="text-success">Còn @Model.SoLuong @Model.DonViTinh</strong> } 
+                        else { <strong class="text-danger">Tạm hết hàng</strong> }
+                    </span>
+                </div>
+
+                <div class="box-price mb-4">
+                    @if (coGiamGia)
+                    {
+                        <div class="d-flex align-items-end gap-3">
+                            <div class="price-new-detail">@string.Format("{0:N0}", giaChinhThuc) đ</div>
+                            <div class="price-old-detail mb-2">@string.Format("{0:N0}", giaCu) đ</div>
+                            <span class="badge bg-success mb-2 p-2">-@(Math.Round((1 - (giaChinhThuc / (giaCu == 0 ? 1 : giaCu))) * 100))%</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="price-new-detail">@string.Format("{0:N0}", giaChinhThuc) đ</div>
+                    }
+                </div>
+
+                @if (Model.SoLuong > 0)
+                {
+                    <button type="button" class="btn-add-cart w-100 shadow-sm" onclick="ThemGioHang('@Model.MaSp.ToString().Trim()')">
+                        THÊM VÀO GIỎ HÀNG NGAY
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-secondary w-100 py-3 rounded-3 fw-bold disabled">
+                        SẢN PHẨM TẠM HẾT HÀNG
+                    </button>
+                }
+
+                <hr class="my-4 text-muted">
+
+                <h5 class="fw-bold mb-3" style="color: #0033a0;">Thông tin sản phẩm</h5>
+                <div class="box-description">
+                    @if (!string.IsNullOrEmpty(Model.MoTa))
+                    {
+                        @Html.Raw(Model.MoTa.Replace("\n", "<br/>"))
+                    }
+                    else
+                    {
+                        <p class="text-muted fst-italic">Đang cập nhật thông tin chi tiết cho món ăn này...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ========================================================================= *@
+    @* 1. KHU VỰC COMBO GỢI Ý MUA KÈM (THUẬT TOÁN HUI - HIGH UTILITY)            *@
+    @* ========================================================================= *@
+    @if (ViewBag.GoiYApriori != null && ((IEnumerable<MiniStopWeb.Models.SanPham>)ViewBag.GoiYApriori).Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 p-4 mt-5 mb-4" style="background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%); border-left: 5px solid #ffc107 !important;">
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: #0033a0;">
+                        Sản phẩm giá trị cao thường mua kèm
+                    </h4>
+                    <small class="text-muted">Gợi ý các sự kết hợp hoàn hảo mang lại trải nghiệm ẩm thực trọn vẹn và tối ưu nhất cho thực khách.</small>
+                </div>
+                <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill shadow-sm">Combo Giá Trị</span>
+            </div>
+
+            <div class="row row-cols-2 row-cols-md-4 g-4">
+                @foreach (var sp in (IEnumerable<MiniStopWeb.Models.SanPham>)ViewBag.GoiYApriori)
+                {
+                    // Xử lý ảnh cho món gợi ý HUI
+                    string spImg = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80";
+                    if (!string.IsNullOrEmpty(sp.HinhAnh)) { 
+                        spImg = sp.HinhAnh;
+                    }
+                    else {
+                        string maSp = sp.MaSp.Trim().ToUpper();
+                        string tenSp = sp.TenSp.ToLower();
+                        if (maSp == "SP001" || tenSp.Contains("bánh mì que")) { spImg = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=80"; }
+                        else if (maSp == "SP002" || tenSp.Contains("burger")) { spImg = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80"; }
+                        else if (maSp == "SP003" || tenSp.Contains("cơm nắm")) { spImg = "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=500&q=80"; }
+                        else if (maSp == "SP004" || tenSp.Contains("coca")) { spImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80"; }
+                        else if (maSp == "SP005" || tenSp.Contains("trà sữa")) { spImg = "https://images.unsplash.com/photo-1558857563-b3773ed5d1f8?w=500&q=80"; }
+                        else if (maSp == "SP006" || tenSp.Contains("nước suối") || tenSp.Contains("aquafina")) { spImg = "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&q=80"; }
+                        else if (maSp == "SP007" || tenSp.Contains("kem cây") || tenSp.Contains("cacao")) { spImg = "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=500&q=80"; }
+                        else if (maSp == "SP008" || tenSp.Contains("sữa chua")) { spImg = "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=500&q=80"; }
+                        else if (maSp == "SP009" || tenSp.Contains("sừng bò")) { spImg = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&q=80"; }
+                        else if (maSp == "SP010" || tenSp.Contains("bông lan")) { spImg = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80"; }
+                    }
+
+                    // Xử lý giá cho món gợi ý HUI
+                    string spTenHienThi = sp.TenSp;
+                    decimal spGiaCu = sp.DonGia ?? 0;
+                    decimal spGiaChinhThuc = sp.GiaKhuyenMai ?? sp.DonGia ?? 0;
+                    if (spTenHienThi.Contains("[XẢ KHO 50%]"))
+                    {
+                        spTenHienThi = spTenHienThi.Replace("[XẢ KHO 50%]", "").Trim();
+                        spGiaCu = (sp.DonGia ?? 0) * 2;
+                        spGiaChinhThuc = sp.DonGia ?? 0;
+                    }
+
+                    <div class="col">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 text-center p-3 bg-white" style="transition: 0.3s;"
+                            onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div class="position-relative mb-2">
+                                <img src="@spImg" class="rounded-3 w-100 mb-2" style="height: 120px; object-fit: cover;" alt="@spTenHienThi" />
+                                <span class="badge bg-danger position-absolute top-0 end-0 m-1" style="font-size: 0.7rem;">Hay mua cùng</span>
+                            </div>
+                            <h6 class="fw-bold text-dark text-truncate mt-1">
+                                @if(sp.TenSp.Contains("[XẢ KHO 50%]")) { <span class="text-danger me-1">[GIẢM 50%]</span> }
+                                @spTenHienThi
+                            </h6>
+                            @if(sp.TenSp.Contains("[XẢ KHO 50%]")) {
+                                <p class="text-muted small text-decoration-line-through mb-0">@string.Format("{0:N0}", spGiaCu) đ</p>
+                            }
+                            <p class="text-danger fw-bold mb-3">@string.Format("{0:N0}", spGiaChinhThuc) đ</p>
+                            <div class="d-flex gap-1 mt-auto">
+                                <a href="/SanPham/ChiTiet?id=@sp.MaSp.Trim()" class="btn btn-outline-primary btn-sm rounded-pill flex-grow-1 fw-bold">Xem</a>
+                                <button type="button" class="btn btn-warning btn-sm rounded-pill fw-bold px-3 text-dark" onclick="ThemGioHang('@sp.MaSp.Trim()')">
+                                    Mua
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ========================================================================= *@
+    @* 2. KHU VỰC SẢN PHẨM CÙNG DANH MỤC                                       *@
+    @* ========================================================================= *@
+    @if (ViewBag.SanPhamLienQuan != null && ((IEnumerable<MiniStopWeb.Models.SanPham>)ViewBag.SanPhamLienQuan).Any())
+    {
+        <h4 class="fw-bold mt-5 mb-4 text-uppercase border-start border-5 border-warning ps-3" style="color: #0033a0;">Sản phẩm cùng danh mục</h4>
+        <div class="row row-cols-2 row-cols-md-4 g-4">
+            @foreach (var sp in ViewBag.SanPhamLienQuan)
+            {
+                // Xử lý ảnh cho sản phẩm liên quan
+                string spImg = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80";
+                if (!string.IsNullOrEmpty(sp.HinhAnh)) { 
+                    spImg = sp.HinhAnh;
+                }
+                else {
+                    string maSp = sp.MaSp.Trim().ToUpper();
+                    string tenSp = sp.TenSp.ToLower();
+                    if (maSp == "SP001" || tenSp.Contains("bánh mì que")) { spImg = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=80"; }
+                    else if (maSp == "SP002" || tenSp.Contains("burger")) { spImg = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80"; }
+                    else if (maSp == "SP003" || tenSp.Contains("cơm nắm")) { spImg = "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=500&q=80"; }
+                    else if (maSp == "SP004" || tenSp.Contains("coca")) { spImg = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80"; }
+                    else if (maSp == "SP005" || tenSp.Contains("trà sữa")) { spImg = "https://images.unsplash.com/photo-1558857563-b3773ed5d1f8?w=500&q=80"; }
+                    else if (maSp == "SP006" || tenSp.Contains("nước suối") || tenSp.Contains("aquafina")) { spImg = "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&q=80"; }
+                    else if (maSp == "SP007" || tenSp.Contains("kem cây") || tenSp.Contains("cacao")) { spImg = "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=500&q=80"; }
+                    else if (maSp == "SP008" || tenSp.Contains("sữa chua")) { spImg = "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=500&q=80"; }
+                    else if (maSp == "SP009" || tenSp.Contains("sừng bò")) { spImg = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&q=80"; }
+                    else if (maSp == "SP010" || tenSp.Contains("bông lan")) { spImg = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80"; }
+                }
+
+                // Xử lý XẢ KHO cho danh sách liên quan bên dưới
+                string spTenHienThi = sp.TenSp;
+                decimal spGiaCu = sp.DonGia ?? 0;
+                decimal spGiaChinhThuc = sp.GiaKhuyenMai ?? sp.DonGia ?? 0;
+                if (spTenHienThi.Contains("[XẢ KHO 50%]"))
+                {
+                    spTenHienThi = spTenHienThi.Replace("[XẢ KHO 50%]", "").Trim();
+                    spGiaCu = (sp.DonGia ?? 0) * 2;
+                    spGiaChinhThuc = sp.DonGia ?? 0;
+                }
+
+                <div class="col">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 text-center p-3" style="transition: 0.3s;"
+                        onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <img src="@spImg" class="rounded-3 w-100 mb-2" style="height: 120px; object-fit: cover;" alt="@spTenHienThi" />
+                        <h6 class="fw-bold text-dark text-truncate mt-1">
+                            @if(sp.TenSp.Contains("[XẢ KHO 50%]")) { <span class="text-danger me-1">[GIẢM 50%]</span> }
+                            @spTenHienThi
+                        </h6>
+                        @if(sp.TenSp.Contains("[XẢ KHO 50%]")) {
+                            <p class="text-muted small text-decoration-line-through mb-0">@string.Format("{0:N0}", spGiaCu) đ</p>
+                        }
+                        <p class="text-danger fw-bold mb-2">@string.Format("{0:N0}", spGiaChinhThuc) đ</p>
+                        <a href="/SanPham/ChiTiet?id=@sp.MaSp.Trim()" class="btn btn-outline-primary btn-sm rounded-pill mt-auto fw-bold">Xem chi tiết</a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function ThemGioHang(maSanPham) {
+            fetch(`/GioHang/ThemVaoGio?id=${maSanPham}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.requiresLogin) {
+                    Swal.fire({
+                        icon: 'warning', title: 'Chưa đăng nhập!', text: data.message,
+                        showCancelButton: true, confirmButtonText: 'Đăng nhập ngay', cancelButtonText: 'Để sau',
+                        confirmButtonColor: '#0033a0'
+                    }).then((result) => { if (result.isConfirmed) window.location.href = '/TaiKhoan/DangNhap'; });
+                } else if (data.success) {
+                    Swal.fire({ position: 'top-end', icon: 'success', title: data.message, showConfirmButton: false, timer: 1500, toast: true });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Lỗi!', text: data.message });
+                }
+            });
+        }
+    </script>
+}

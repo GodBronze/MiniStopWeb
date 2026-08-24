@@ -1,0 +1,69 @@
+@{
+    ViewData["Title"] = "Đăng Ký Tài Khoản Mới - MiniStop";
+}
+
+<div class="container my-5">
+    <div class="row justify-content-center align-items-center" style="min-height: 75vh;">
+        <div class="col-12 col-md-7 col-lg-5">
+            <div class="card border-0 shadow-lg p-4 bg-white" style="border-radius: 24px; border-top: 6px solid #ffc107 !important;">
+                
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold mb-1" style="color: #0033a0;"><i class="fa-solid fa-user-plus text-warning me-2"></i>TẠO TÀI KHOẢN</h2>
+                    <p class="text-muted small">Trở thành thành viên để tích lũy điểm thưởng khi mua sắm</p>
+                </div>
+
+                @if (ViewBag.Loi != null)
+                {
+                    <div class="alert alert-danger border-0 rounded-3 small p-2 text-center mb-3" role="alert">
+                        <i class="fa-solid fa-circle-exclamation me-1"></i> @ViewBag.Loi
+                    </div>
+                }
+
+                <form action="/TaiKhoan/DangKy" method="post">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Họ và tên của bạn</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 12px 0 0 12px;"><i class="fa-solid fa-signature"></i></span>
+                            <input type="text" name="tenKh" class="form-control bg-light border-start-0 shadow-none" placeholder="Ví dụ: Nguyễn Văn A" required style="border-radius: 0 12px 12px 0; padding: 10px;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Số điện thoại liên hệ</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 12px 0 0 12px;"><i class="fa-solid fa-phone"></i></span>
+                            <input type="tel" name="sdt" class="form-control bg-light border-start-0 shadow-none" placeholder="Nhập số điện thoại dùng đăng nhập..." required style="border-radius: 0 12px 12px 0; padding: 10px;">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Địa chỉ cư trú / Giao hàng</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 12px 0 0 12px;"><i class="fa-solid fa-location-dot"></i></span>
+                            <input type="text" name="diaChi" class="form-control bg-light border-start-0 shadow-none" placeholder="Số nhà, tên đường, phường/xã..." required style="border-radius: 0 12px 12px 0; padding: 10px;">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-secondary">Thiết lập mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0 text-muted" style="border-radius: 12px 0 0 12px;"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="matKhau" class="form-control bg-light border-start-0 shadow-none" placeholder="Tối thiểu 6 ký tự bảo mật..." required style="border-radius: 0 12px 12px 0; padding: 10px;">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning w-100 fw-bold py-2.5 mb-3 shadow-sm text-uppercase" style="border-radius: 50px; color: #0033a0; font-size: 1rem; letter-spacing: 0.5px; transition: 0.3s;">
+                        Đăng Ký Tài Khoản <i class="fa-solid fa-circle-check ms-1"></i>
+                    </button>
+                </form>
+
+                <div class="text-center mt-2">
+                    <span class="text-muted small">Bạn đã có tài khoản từ trước?</span>
+                    <a href="/TaiKhoan/DangNhap" class="text-decoration-none small fw-bold ms-1" style="color: #0033a0;">Đăng nhập</a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>

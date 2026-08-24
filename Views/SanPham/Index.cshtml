@@ -1,0 +1,260 @@
+@model IEnumerable<MiniStopWeb.Models.SanPham>
+
+@{
+    ViewData["Title"] = "Sản Phẩm - MiniStop";
+    string? maDmHienTai = ViewBag.MaDmHienTai as string;
+    string? keywordHienTai = ViewBag.KeywordHienTai as string;
+    string? sortHienTai = ViewBag.SortHienTai as string;
+}
+
+<style>
+    .filter-bar { background: #fff; border-radius: 12px; padding: 15px 20px; border: 1px solid #eaeaea; margin-bottom: 20px; }
+    .btn-filter { border-radius: 20px; font-size: 0.85rem; font-weight: 600; padding: 6px 16px; border: 1px solid #ddd; color: #555; background: #fff; transition: 0.2s; text-decoration: none; display: inline-block; }
+    .btn-filter:hover, .btn-filter.active { border-color: #0033a0; color: #0033a0; background-color: #f0f4f8; }
+    
+    .product-card { border-radius: 16px; overflow: hidden; border: 1px solid #eaeaea; position: relative; transition: 0.3s; }
+    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); border-color: #ffc107; }
+    .badge-hot { position: absolute; top: 10px; right: 10px; background: #e31837; color: #fff; padding: 4px 10px; font-size: 0.75rem; font-weight: bold; border-radius: 8px; z-index: 2; }
+    .price-old { text-decoration: line-through; color: #999; font-size: 0.85rem; font-weight: normal; margin-right: 8px; }
+    .price-new { color: #e31837; font-weight: bold; font-size: 1.1rem; }
+
+    .btn-filter-pill { font-size: 0.9rem; padding: 8px 16px; border-color: #e0e0e0; color: #333; transition: all 0.2s ease-in-out; }
+    .btn-filter-pill.active { border-color: #288ad6; color: #288ad6; background-color: #f2f9ff; font-weight: bold; }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="row g-4">
+        <div class="col-12 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4" style="position: sticky; top: 90px; z-index: 100;">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                    <h6 class="fw-bold text-uppercase" style="color: #0033a0;">Khám phá Menu</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="list-group list-group-flush">
+                        <a href="/SanPham/Index" class="list-group-item list-group-item-action border-0 rounded-3 mb-1 @(string.IsNullOrEmpty(maDmHienTai) ? "bg-light text-primary fw-bold" : "text-muted")">
+                            Tất cả món ngon
+                        </a>
+                        @if (ViewBag.DanhMucs != null)
+                        {
+                            foreach (var dm in ViewBag.DanhMucs)
+                            {
+                                string cleanMaDm = dm.MaDm.ToString().Trim();
+                                bool isActive = (maDmHienTai?.Trim() == cleanMaDm);
+                                <a href="/SanPham/Index?maDm=@cleanMaDm" class="list-group-item list-group-item-action border-0 rounded-3 mb-1 @(isActive ? "bg-light text-primary fw-bold" : "text-muted")">
+                                    @dm.TenDm
+                                </a>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-9">
+            <div class="filter-bar shadow-sm d-flex flex-wrap align-items-center gap-2 justify-content-between">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold px-3 me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+                        Bộ Lọc
+                    </button>
+                    <span class="fw-bold text-dark me-2 small">Sắp xếp theo:</span>
+                    <a href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=noibat" class="btn-filter @(sortHienTai == "noibat" ? "active" : "")">Nổi bật</a>
+                    <a href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=banchay" class="btn-filter @(sortHienTai == "banchay" ? "active" : "")">Bán chạy</a>
+                    <a href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=giamgia" class="btn-filter @(sortHienTai == "giamgia" ? "active" : "")">% Giảm giá</a>
+                    <a href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=moi" class="btn-filter @(sortHienTai == "moi" || string.IsNullOrEmpty(sortHienTai) ? "active" : "")">Mới nhất</a>
+                    <div class="dropdown ms-1">
+                        <button class="btn-filter dropdown-toggle @(sortHienTai == "giatang" || sortHienTai == "giagiam" ? "active" : "")" type="button" data-bs-toggle="dropdown">Giá</button>
+                        <ul class="dropdown-menu shadow border-0 rounded-3">
+                            <li><a class="dropdown-item small" href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=giatang">Thấp đến cao</a></li>
+                            <li><a class="dropdown-item small" href="/SanPham/Index?maDm=@maDmHienTai&keyword=@keywordHienTai&sort=giagiam">Cao đến thấp</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="small text-muted">Hiển thị <strong>@(Model?.Count() ?? 0)</strong> kết quả</div>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        // ========================================================================
+                        // THUẬT TOÁN NHẬN DIỆN HÌNH ẢNH (KHỚP ĐÚNG 10 SẢN PHẨM MINISTOP)
+                        // ========================================================================
+                        string foodImage = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80";
+
+                        if (!string.IsNullOrEmpty(item.HinhAnh))
+                        {
+                            foodImage = item.HinhAnh; // Ưu tiên 100% ảnh Admin tự nhập
+                        }
+                        else
+                        {
+                            string maSp = item.MaSp.Trim().ToUpper();
+                            string tenSp = item.TenSp.ToLower();
+                            if (maSp == "SP001" || tenSp.Contains("bánh mì que")) { foodImage = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=80"; }
+                            else if (maSp == "SP002" || tenSp.Contains("burger")) { foodImage = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80"; }
+                            else if (maSp == "SP003" || tenSp.Contains("cơm nắm")) { foodImage = "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=500&q=80"; }
+                            else if (maSp == "SP004" || tenSp.Contains("coca")) { foodImage = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80"; }
+                            else if (maSp == "SP005" || tenSp.Contains("trà sữa")) { foodImage = "https://images.unsplash.com/photo-1558857563-b3773ed5d1f8?w=500&q=80"; }
+                            else if (maSp == "SP006" || tenSp.Contains("nước suối") || tenSp.Contains("aquafina")) { foodImage = "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?w=500&q=80"; }
+                            else if (maSp == "SP007" || tenSp.Contains("kem cây") || tenSp.Contains("cacao")) { foodImage = "https://images.unsplash.com/photo-1580915411954-282cb1b0d780?w=500&q=80"; }
+                            else if (maSp == "SP008" || tenSp.Contains("sữa chua")) { foodImage = "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=500&q=80"; }
+                            else if (maSp == "SP009" || tenSp.Contains("sừng bò")) { foodImage = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&q=80"; }
+                            else if (maSp == "SP010" || tenSp.Contains("bông lan")) { foodImage = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&q=80"; }
+                        }
+                        // ========================================================================
+
+                        // ========================================================
+                        // THUẬT TOÁN BÓC TÁCH "XẢ KHO 50%" VÀ XỬ LÝ GIÁ
+                        // ========================================================
+                        decimal giaChinhThuc = item.GiaKhuyenMai ?? item.DonGia ?? 0;
+                        bool coGiamGia = item.GiaKhuyenMai != null && item.GiaKhuyenMai < item.DonGia;
+                        string tenHienThi = item.TenSp;
+                        decimal giaCu = item.DonGia ?? 0;
+
+                        if (tenHienThi.Contains("[XẢ KHO 50%]"))
+                        {
+                            tenHienThi = tenHienThi.Replace("[XẢ KHO 50%]", "").Trim();
+                            giaCu = (item.DonGia ?? 0) * 2;
+                            giaChinhThuc = item.DonGia ?? 0;
+                            coGiamGia = true;
+                        }
+                        // ========================================================
+
+                        <div class="col">
+                            <div class="card product-card h-100 bg-white">
+                                @if (item.IsNoiBat == true)
+                                {
+                                    <span class="badge-hot shadow-sm">Hot</span>
+                                }
+                                <div class="position-relative">
+                                    <img src="@foodImage" class="card-img-top" alt="@item.TenSp" style="height: 180px; object-fit: cover;">
+                                    <div class="position-absolute bottom-0 start-0 m-2">
+                                        @if (item.SoLuong > 0) {
+                                            <span class="badge bg-success bg-opacity-75">Còn hàng</span>
+                                        } else {
+                                            <span class="badge bg-danger bg-opacity-75">Hết hàng</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="card-body d-flex flex-column p-3">
+                                    <a href="/SanPham/ChiTiet?id=@item.MaSp.Trim()" class="text-decoration-none">
+                                          <h6 class="card-title fw-bold text-dark mb-1 hover-text-warning" style="transition: 0.2s;">
+                                              @if (item.TenSp.Contains("[XẢ KHO 50%]"))
+                                              {
+                                                  <span class="badge bg-danger rounded-pill me-1">[GIẢM 50%]</span>
+                                              }
+                                              @tenHienThi
+                                          </h6>
+                                    </a>
+                                    
+                                    <div class="text-muted small mb-3">
+                                        ĐVT: @item.DonViTinh <span class="mx-1">•</span> Tồn: @item.SoLuong
+                                    </div>
+                                    
+                                     <div class="mt-auto pt-2 border-top d-flex justify-content-between align-items-end">
+                                        <div>
+                                            @if (coGiamGia)
+                                            {
+                                                <div class="price-old">@string.Format("{0:N0}", giaCu)đ</div>
+                                            }
+                                            <div class="price-new">@string.Format("{0:N0}", giaChinhThuc) đ</div>
+                                        </div>
+                                        @if (item.SoLuong > 0)
+                                        {
+                                            <button type="button" class="btn btn-warning btn-sm fw-bold rounded-3 px-3 shadow-sm text-dark" onclick="ThemGioHang('@item.MaSp.ToString().Trim()')">MUA</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-secondary btn-sm disabled rounded-3 px-3">Hết</button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12 text-center py-5 w-100 bg-white rounded-4 border shadow-sm">
+                        <h5 class="text-muted fw-bold mt-3">Không tìm thấy sản phẩm nào phù hợp!</h5>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold w-100 text-center">Tất cả bộ lọc</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <h6 class="fw-bold mb-3">Danh mục món</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4" id="box-danhmuc">
+                    @if (ViewBag.DanhMucs != null)
+                    {
+                        foreach (var dm in ViewBag.DanhMucs)
+                        {
+                            <button type="button" class="btn btn-outline-secondary rounded-3 btn-filter-pill" data-value="@dm.MaDm.Trim()">@dm.TenDm</button>
+                        }
+                    }
+                </div>
+                <h6 class="fw-bold mb-3">Giá</h6>
+                <div class="d-flex flex-wrap gap-2 mb-3" id="box-gia">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 btn-filter-pill" data-min="0" data-max="15000">Dưới 15.000đ</button>
+                    <button type="button" class="btn btn-outline-secondary rounded-3 btn-filter-pill" data-min="15000" data-max="30000">Từ 15.000đ - 30.000đ</button>
+                    <button type="button" class="btn btn-outline-secondary rounded-3 btn-filter-pill" data-min="30000" data-max="50000">Từ 30.000đ - 50.000đ</button>
+                    <button type="button" class="btn btn-outline-secondary rounded-3 btn-filter-pill" data-min="50000" data-max="">Trên 50.000đ</button>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="small text-primary fw-bold">Hoặc nhập mức giá (Ví dụ: Nhập 50 = 50.000đ)</span>
+                </div>
+                <div class="row g-2 align-items-center">
+                    <div class="col-5">
+                        <div class="input-group border rounded-3 overflow-hidden focus-ring-primary">
+                            <input type="text" class="form-control border-0 text-end pe-0 format-price shadow-none" id="inputMinPrice" placeholder="0">
+                            <span class="input-group-text bg-white border-0 text-muted ps-1 fw-bold">.000đ</span>
+                        </div>
+                    </div>
+                    <div class="col-2 text-center text-muted fw-bold">-</div>
+                    <div class="col-5">
+                        <div class="input-group border rounded-3 overflow-hidden focus-ring-primary">
+                            <input type="text" class="form-control border-0 text-end pe-0 format-price shadow-none" id="inputMaxPrice" placeholder="50">
+                            <span class="input-group-text bg-white border-0 text-muted ps-1 fw-bold">.000đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 d-flex justify-content-between p-4 pt-0">
+                <button type="button" class="btn btn-outline-danger rounded-3 px-4 py-2" onclick="BoChonTatCa()">Bỏ chọn</button>
+                <button type="button" class="btn btn-primary rounded-3 px-5 py-2 fw-bold" onclick="ApDungBoLoc()" style="background-color: #288ad6; border: none;">Xem kết quả</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function ThemGioHang(maSanPham) {
+            fetch(`/GioHang/ThemVaoGio?id=${maSanPham}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.requiresLogin) {
+                    Swal.fire({
+                        icon: 'warning', title: 'Chưa đăng nhập!', text: data.message,
+                        showCancelButton: true, confirmButtonText: 'Đăng nhập ngay', cancelButtonText: 'Để sau',
+                        confirmButtonColor: '#0033a0'
+                    }).then((result) => { if (result.isConfirmed) window.location.href = '/TaiKhoan/DangNhap'; });
+                } else if (data.success) {
+                    Swal.fire({ position: 'top-end', icon: 'success', title: data.message, showConfirmButton: false, timer: 1500, toast: true });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Lỗi!', text: data.message });
+                }
+            });
+        }
+    </script>
+}

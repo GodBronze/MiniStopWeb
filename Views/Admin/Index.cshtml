@@ -1,0 +1,237 @@
+@model IEnumerable<MiniStopWeb.Models.HoaDon>
+@using Microsoft.AspNetCore.Http
+@{
+    ViewData["Title"] = "Trung Tâm Chỉ Huy MiniStop";
+}
+
+<div class="container-fluid mt-3">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <h3 class="fw-bold text-dark mb-3 mb-md-0"><i class="fa-solid fa-chart-line text-primary me-2"></i>TỔNG QUAN KINH DOANH</h3>
+        
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <form action="/Admin/Index" method="get" class="d-flex gap-1 bg-white p-1 rounded-pill shadow-sm border me-3">
+                <button type="submit" name="filter" value="thang" class="btn btn-sm rounded-pill @(ViewBag.CurrentFilter == "thang" ? "btn-primary" : "btn-light text-muted fw-bold")">Tháng này</button>
+                <button type="submit" name="filter" value="quy" class="btn btn-sm rounded-pill @(ViewBag.CurrentFilter == "quy" ? "btn-primary" : "btn-light text-muted fw-bold")">Quý này</button>
+                <button type="submit" name="filter" value="nam" class="btn btn-sm rounded-pill @(ViewBag.CurrentFilter == "nam" ? "btn-primary" : "btn-light text-muted fw-bold")">Năm nay</button>
+            </form>
+
+            <a href="/AdminChat" class="btn btn-success fw-bold text-white px-4 rounded-3 shadow-sm">
+                <i class="fa-solid fa-headset me-2"></i> Trực Tổng Đài
+            </a>
+
+            @if (Context.Session.GetString("Admin_VaiTro") == "Admin")
+            {
+                <a href="/Admin/QuanLySanPham" class="btn btn-warning fw-bold text-dark px-4 rounded-3 shadow-sm">
+                    <i class="fa-solid fa-box-open me-2"></i> Quản Lý Sản Phẩm
+                </a>
+            }
+            <a href="/Admin/DangXuat" class="btn btn-outline-danger fw-bold px-3 rounded-3 shadow-sm">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["ThongBaoSuccess"] != null)
+    {
+        <div class="alert alert-success fw-bold shadow-sm"><i class="fa-solid fa-circle-check me-2"></i>@TempData["ThongBaoSuccess"]</div>
+    }
+    @if (TempData["ThongBao"] != null)
+    {
+        <div class="alert alert-info fw-bold shadow-sm"><i class="fa-solid fa-bell me-2"></i>@TempData["ThongBao"]</div>
+    }
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white p-3">
+                <h6 class="text-white-50 fw-bold">Doanh Thu Thực Tế</h6>
+                <h3 class="fw-bold mb-0">@Convert.ToDecimal(ViewBag.DoanhThuThucTe).ToString("N0") đ</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-success text-white p-3">
+                <h6 class="text-white-50 fw-bold">Tổng Đơn Hàng</h6>
+                <h3 class="fw-bold mb-0">@ViewBag.TongDonHang Đơn</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-warning text-dark p-3">
+                <h6 class="text-dark-50 fw-bold">Chờ Xử Lý</h6>
+                <h3 class="fw-bold mb-0">@ViewBag.DonChoDuyet Đơn</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 bg-danger text-white p-3">
+                <h6 class="text-white-50 fw-bold">Đơn Bị Hủy</h6>
+                <h3 class="fw-bold mb-0">@ViewBag.DonDaHuy Đơn</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h6 class="fw-bold text-success"><i class="fa-solid fa-arrow-trend-up me-2"></i>TOP 5 MÓN BÁN CHẠY NHẤT</h6>
+                </div>
+                <div class="card-body"><canvas id="topProductsChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h6 class="fw-bold text-danger"><i class="fa-solid fa-arrow-trend-down me-2"></i>TOP 5 MÓN BÁN CHẬM (Ế)</h6>
+                </div>
+                <div class="card-body"><canvas id="worstProductsChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm rounded-4" style="border-left: 5px solid #dc3545 !important;">
+                <div class="card-header bg-white border-0 pt-4 pb-2 d-flex justify-content-between">
+                    <h5 class="fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>CẢNH BÁO: HÀNG TỒN KHO SẮP HẾT HẠN</h5>
+                    <span class="badge bg-danger rounded-pill">Cần xử lý gấp</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-4">Tên Món</th>
+                                <th>Hạn Sử Dụng</th>
+                                <th class="text-center">Số Lượng Tồn</th>
+                                <th class="text-end pe-4">Giải Pháp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.HangSapHetHan != null && ((IEnumerable<MiniStopWeb.Models.SanPham>)ViewBag.HangSapHetHan).Any())
+                            {
+                                foreach (var item in (IEnumerable<MiniStopWeb.Models.SanPham>)ViewBag.HangSapHetHan)
+                                {
+                                    var soNgayConLai = (item.HanSuDung.Value - DateTime.Now).Days;
+                                    <tr>
+                                        <td class="ps-4 fw-bold">@item.TenSp</td>
+                                        <td>
+                                            <span class="text-danger fw-bold">@item.HanSuDung.Value.ToString("dd/MM/yyyy")</span> 
+                                            <small class="text-muted">(Còn @soNgayConLai ngày)</small>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-warning text-dark fs-6">@item.SoLuong hộp</span></td>
+                                        <td class="text-end pe-4">
+                                            <form action="/Admin/TaoVoucherXaKho" method="post" class="m-0">
+                                                <input type="hidden" name="maSp" value="@item.MaSp" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger fw-bold rounded-pill shadow-sm">
+                                                    <i class="fa-solid fa-ticket me-1"></i> Tạo Voucher 50%
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="4" class="text-center py-4 text-success fw-bold">Không có mặt hàng nào sắp hết hạn.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-header bg-dark text-white pt-3 pb-3 rounded-top-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0"><i class="fa-solid fa-file-invoice-dollar me-2 text-warning"></i>DANH SÁCH 10 ĐƠN HÀNG MỚI NHẤT</h5>
+        </div>
+        <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th class="ps-4">Mã ĐH</th>
+                        <th>Khách Hàng</th>
+                        <th>Ngày Đặt</th>
+                        <th>Tổng Tiền</th>
+                        <th class="text-center">Trạng Thái</th>
+                        <th class="text-end pe-4">Hành Động & Giao Hàng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-secondary">@item.MaHd</td>
+                                <td class="fw-bold">@item.MaKh</td>
+                                <td>@item.NgayNhap?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold text-danger">@item.TongTien?.ToString("N0") đ</td>
+                                <td class="text-center">
+                                    @if (string.IsNullOrEmpty(item.TrangThai) || item.TrangThai == "Chờ duyệt") {
+                                        <span class="badge bg-warning text-dark border"><i class="fa-solid fa-clock me-1"></i>Chờ duyệt</span>
+                                    } else if (item.TrangThai == "Đã duyệt") {
+                                        <span class="badge bg-success"><i class="fa-solid fa-check-circle me-1"></i>Đã duyệt</span>
+                                    } else if (item.TrangThai.Contains("Hủy")) {
+                                        <span class="badge bg-danger"><i class="fa-solid fa-xmark me-1"></i>Đã hủy</span>
+                                    } else if (item.TrangThai.Contains("Đang giao")) {
+                                        <span class="badge bg-info text-dark"><i class="fa-solid fa-truck-fast me-1"></i>@item.TrangThai</span>
+                                    } else {
+                                        <span class="badge bg-primary"><i class="fa-solid fa-flag-checkered me-1"></i>@item.TrangThai</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        @if (string.IsNullOrEmpty(item.TrangThai) || item.TrangThai == "Chờ duyệt")
+                                        {
+                                            <form action="/Admin/DuyetDonHang" method="post"><input type="hidden" name="id" value="@item.MaHd" /><button class="btn btn-sm btn-success fw-bold">Duyệt</button></form>
+                                            <form action="/Admin/HuyDonHang" method="post"><input type="hidden" name="id" value="@item.MaHd" /><button class="btn btn-sm btn-outline-danger fw-bold">Hủy</button></form>
+                                        }
+                                        else if (item.TrangThai == "Đã duyệt")
+                                        {
+                                            <form action="/Admin/DayDonChoDonViVanChuyen" method="post" class="d-flex gap-1">
+                                                <input type="hidden" name="maHD" value="@item.MaHd" />
+                                                <button type="submit" name="donViVanChuyen" value="GHN" class="btn btn-sm btn-warning fw-bold text-dark"><i class="fa-solid fa-truck"></i> GHN</button>
+                                                <button type="submit" name="donViVanChuyen" value="Ahamove" class="btn btn-sm btn-warning fw-bold text-dark"><i class="fa-solid fa-motorcycle"></i> AHA</button>
+                                            </form>
+                                        }
+                                        else if (item.TrangThai.Contains("Đang giao"))
+                                        {
+                                            <form action="/Admin/XacNhanHoanThanh" method="post">
+                                                <input type="hidden" name="maHD" value="@item.MaHd" />
+                                                <button class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-check"></i> Hoàn thành</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="6" class="text-center text-muted py-4">Chưa có đơn hàng nào</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // 1. BIỂU ĐỒ BÁN CHẠY (MÀU XANH)
+        var topLabels = @Html.Raw(ViewBag.TopSP_Names ?? "[]");
+        var topData = @Html.Raw(ViewBag.TopSP_Quantities ?? "[]");
+        new Chart(document.getElementById('topProductsChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: topLabels, datasets: [{ label: 'Đã bán', data: topData, backgroundColor: '#198754', borderRadius: 4 }] }
+        });
+
+        // 2. BIỂU ĐỒ BÁN Ế (MÀU ĐỎ)
+        var worstLabels = @Html.Raw(ViewBag.WorstSP_Names ?? "[]");
+        var worstData = @Html.Raw(ViewBag.WorstSP_Quantities ?? "[]");
+        new Chart(document.getElementById('worstProductsChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: worstLabels, datasets: [{ label: 'Đã bán', data: worstData, backgroundColor: '#dc3545', borderRadius: 4 }] }
+        });
+    </script>
+}

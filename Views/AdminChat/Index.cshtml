@@ -1,0 +1,171 @@
+@{
+    ViewData["Title"] = "Quản lý Hỗ trợ Khách hàng";
+    // Layout = "~/Views/Shared/_AdminLayout.cshtml"; // Nếu có file layout riêng cho admin, hãy bỏ comment dòng này
+}
+
+<div class="container-fluid mt-4">
+    <h3 class="text-primary mb-4"><i class="fa-solid fa-comments"></i> Trực Tổng Đài Hỗ Trợ MiniStop</h3>
+    
+    <div class="row shadow-sm" style="height: 75vh; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        
+        <div class="col-md-4 bg-light p-0 border-end" style="height: 100%; overflow-y: auto;">
+            <div class="p-3 bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+                <span>Khách Hàng Cần Hỗ Trợ</span>
+                <i class="fa-solid fa-rotate text-white" style="cursor:pointer;" onclick="loadUserList()" title="Làm mới"></i>
+            </div>
+            <div class="list-group list-group-flush" id="user-list">
+                <div class="p-4 text-muted text-center"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải danh sách...</div>
+            </div>
+        </div>
+
+        <div class="col-md-8 p-0 d-flex flex-column bg-white" style="height: 100%;">
+            
+            <div class="p-3 bg-warning text-dark fw-bold border-bottom flex-shrink-0" id="chat-header">
+                <i class="fa-solid fa-hand-pointer me-2"></i>Vui lòng chọn một khách hàng từ danh sách bên trái
+            </div>
+            
+            <div class="flex-grow-1 p-3" id="admin-chat-body" style="overflow-y: auto; background-color: #f4f6f9;">
+                </div>
+
+            <div class="p-3 border-top d-flex gap-2 bg-white flex-shrink-0">
+                <input type="text" id="admin-chat-input" class="form-control rounded-pill px-4" placeholder="Nhập câu trả lời của bạn..." disabled onkeypress="handleAdminEnter(event)">
+                <button class="btn btn-primary rounded-pill px-4 fw-bold" id="btn-send-admin" disabled onclick="adminSendMessage()">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* CSS trang trí cho khung chat Admin */
+    .admin-msg-bubble { max-width: 75%; padding: 12px 18px; border-radius: 20px; margin-bottom: 12px; font-size: 0.95rem; line-height: 1.5; }
+    .admin-msg-bubble.customer { background-color: #fff; border: 1px solid #dee2e6; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .admin-msg-bubble.admin { background-color: #0033a0; color: white; align-self: flex-end; border-bottom-right-radius: 4px; margin-left: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    
+    .user-item { cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; }
+    .user-item:hover { background-color: #e9ecef; }
+    .user-item.active { background-color: #e6f2ff; border-left: 4px solid #0033a0; }
+    .user-item.active .fw-bold { color: #0033a0; }
+</style>
+
+<script>
+    let currentMaKh = null;
+    let chatInterval = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadUserList();
+        // Cứ 5 giây tự động cập nhật danh sách xem có khách hàng mới không
+        setInterval(loadUserList, 5000);
+    });
+
+    // 1. Tải danh sách người dùng bên cột trái
+    async function loadUserList() {
+        try {
+            let response = await fetch('/AdminChat/GetDanhSachKhachHang');
+            let data = await response.json();
+            
+            let listHtml = '';
+            if(data.length === 0) {
+                listHtml = '<div class="p-4 text-muted text-center"><i class="fa-regular fa-face-smile me-2"></i>Hiện chưa có khách hàng nào cần hỗ trợ.</div>';
+            } else {
+                data.forEach(user => {
+                    let activeClass = (user.maKh === currentMaKh) ? 'active' : '';
+                    let tenHienThi = user.tenKh || "Khách hàng ẩn danh";
+                    listHtml += `
+                        <div class="list-group-item user-item p-3 ${activeClass}" onclick="selectUser('${user.maKh}', '${tenHienThi}')">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="fa-solid fa-circle-user fs-2 text-secondary"></i>
+                                    <div>
+                                        <div class="fw-bold mb-1">${tenHienThi}</div>
+                                        <small class="text-muted">Mã: ${user.maKh}</small>
+                                    </div>
+                                </div>
+                                ${user.unreadCount > 0 ? `<span class="badge bg-danger rounded-pill shadow-sm" style="font-size:0.8rem;">${user.unreadCount} tin mới</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('user-list').innerHTML = listHtml;
+        } catch (error) { console.error("Lỗi:", error); }
+    }
+
+    // 2. Kích hoạt cuộc hội thoại khi bấm vào 1 khách hàng
+    function selectUser(maKh, tenKh) {
+        currentMaKh = maKh;
+        
+        // Cập nhật Header và mở khóa ô nhập text
+        document.getElementById('chat-header').innerHTML = `<i class="fa-solid fa-circle-dot text-success me-2"></i> Đang hỗ trợ trực tiếp: <span class="fw-bold text-primary">${tenKh}</span>`;
+        document.getElementById('admin-chat-input').disabled = false;
+        document.getElementById('btn-send-admin').disabled = false;
+        
+        // Highlight khách hàng đang được chọn
+        document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        // Tải tin nhắn và thiết lập vòng lặp lấy tin mới mỗi 2 giây
+        loadChatDetails();
+        if(chatInterval) clearInterval(chatInterval);
+        chatInterval = setInterval(loadChatDetails, 2000);
+    }
+
+    // 3. Kéo tin nhắn từ SQL lên màn hình
+    async function loadChatDetails() {
+        if (!currentMaKh) return;
+        try {
+            let response = await fetch(`/AdminChat/GetChiTietChat?maKh=${currentMaKh}`);
+            let data = await response.json();
+            
+            let chatBody = document.getElementById('admin-chat-body');
+            
+            // Chỉ cuộn xuống nếu đang ở gần cuối (để admin không bị giật màn hình khi đang đọc tin cũ)
+            let shouldScroll = (chatBody.scrollTop + chatBody.clientHeight) >= (chatBody.scrollHeight - 50);
+            
+            chatBody.innerHTML = ''; 
+            
+            data.forEach(item => {
+                let msgDiv = document.createElement('div');
+                msgDiv.className = item.isAdmin ? 'admin-msg-bubble admin' : 'admin-msg-bubble customer';
+                msgDiv.innerText = item.message;
+                chatBody.appendChild(msgDiv);
+            });
+            
+            if(shouldScroll) chatBody.scrollTop = chatBody.scrollHeight;
+        } catch (error) { console.error("Lỗi:", error); }
+    }
+
+    function handleAdminEnter(e) {
+        if (e.key === 'Enter') adminSendMessage();
+    }
+
+    // 4. Admin bấm Gửi tin nhắn
+    async function adminSendMessage() {
+        let inputField = document.getElementById('admin-chat-input');
+        let message = inputField.value.trim();
+        if (message === "" || !currentMaKh) return;
+
+        // In tạm câu trả lời ra màn hình cho cảm giác phản hồi nhanh (Optimistic UI)
+        let chatBody = document.getElementById('admin-chat-body');
+        let msgDiv = document.createElement('div');
+        msgDiv.className = 'admin-msg-bubble admin';
+        msgDiv.innerText = message;
+        chatBody.appendChild(msgDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        inputField.value = '';
+
+        try {
+            // Đóng gói data gửi lên Controller
+            let formData = new FormData();
+            formData.append('maKh', currentMaKh);
+            formData.append('message', message);
+
+            await fetch('/AdminChat/GuiTinNhan', {
+                method: 'POST',
+                body: formData
+            });
+            loadChatDetails();
+        } catch (error) { console.error("Lỗi:", error); }
+    }
+</script>

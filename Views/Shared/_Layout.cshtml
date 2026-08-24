@@ -1,0 +1,193 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Cửa hàng tiện lợi MiniStop</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MiniStopWeb.styles.css" asp-append-version="true" />
+
+    <style>
+        .ms-navbar { background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-bottom: 3px solid #ffc107; transition: all 0.3s ease; }
+        .ms-navbar .navbar-brand { color: #0033a0 !important; font-size: 1.6rem; letter-spacing: -0.5px; }
+        .ms-navbar .nav-link { color: #495057; font-weight: 600; padding: 10px 12px !important; border-radius: 10px; transition: 0.2s; white-space: nowrap; }
+        .ms-navbar .nav-link:hover, .ms-navbar .nav-link:focus { color: #0033a0; background-color: rgba(0, 51, 160, 0.05); }
+        .btn-ms-login { color: #0033a0; border: 2px solid #0033a0; font-weight: 700; border-radius: 50px; transition: 0.3s; }
+        .btn-ms-login:hover { background-color: #0033a0; color: #fff; }
+        .btn-ms-register { background-color: #ffc107; color: #0033a0; font-weight: 700; border-radius: 50px; border: 2px solid #ffc107; transition: 0.3s; }
+        .btn-ms-register:hover { background-color: #e0a800; border-color: #e0a800; }
+        body { background-color: #f4f6f9; min-height: 100vh; display: flex; flex-direction: column; }
+        main { flex: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg ms-navbar sticky-top">
+            <div class="container-fluid px-lg-5">
+                <a class="navbar-brand fw-bold" href="/">
+                    MiniStop
+                </a>
+                <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-center gap-1 ms-lg-4">
+                        <li class="nav-item"><a class="nav-link" href="/">Trang Chủ</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/SanPham">Sản Phẩm</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/GioHang">Giỏ Hàng</a></li>
+                        <li class="nav-item"> <a class="nav-link" href="/Home/KhuyenMai">Khuyến Mãi</a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="/Home/CuaHang">Cửa Hàng</a> </li>
+                        <li class="nav-item"> <a class="nav-link" href="/Home/LienHe">Liên Hệ</a> </li>
+                    </ul>
+                    
+                    <form action="/SanPham/Index" method="get" class="d-flex position-relative me-lg-3 mt-3 mt-lg-0" style="min-width: 200px; max-width: 280px;" id="searchForm">
+                        <div class="input-group">
+                            <input type="text" name="keyword" id="inputTimKiem" class="form-control border-warning shadow-none" placeholder="Bạn muốn ăn gì?" autocomplete="off" style="border-radius: 20px 0 0 20px;">
+                            <button class="btn btn-warning fw-bold" type="submit" style="border-radius: 0 20px 20px 0;">
+                                Tìm
+                            </button>
+                        </div>
+                        <div id="boxKetQuaTimKiem" class="dropdown-menu w-100 shadow-lg border-0 mt-2 p-2 rounded-4" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1050;"></div>
+                    </form>
+
+                    <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0 pb-3 pb-lg-0">
+                        @using Microsoft.AspNetCore.Http
+                        
+                        @if (Context.Session.GetString("MaKh") != null)
+                        {
+                            <div class="dropdown">
+                                <a class="btn btn-outline-primary dropdown-toggle fw-bold rounded-pill px-3 d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #0033a0; border-color: #0033a0; background-color: rgba(0, 51, 160, 0.02);">
+                                    <span>Xin chào, @Context.Session.GetString("TenKh")</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
+                                    <li><a class="dropdown-item py-2 fw-semibold text-muted" href="/GioHang">Giỏ hàng của tôi</a></li>
+                                    <li><hr class="dropdown-divider bg-light"></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold text-danger" href="/TaiKhoan/DangXuat">Đăng xuất</a></li>
+                                </ul>
+                            </div>
+                        }
+                        else if (Context.Session.GetString("Admin_MaNV") != null)
+                        {
+                            <div class="dropdown">
+                                <a class="btn btn-danger dropdown-toggle fw-bold rounded-pill px-3 d-flex align-items-center gap-2 shadow-sm" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span>Admin: @Context.Session.GetString("Admin_TenNV")</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
+                                    <li><a class="dropdown-item py-2 fw-bold text-primary" href="/Admin/Index">Vào Trang Quản Trị</a></li>
+                                    <li><hr class="dropdown-divider bg-light"></li>
+                                    <li><a class="dropdown-item py-2 fw-semibold text-danger" href="/Admin/DangXuat">Đăng xuất Admin</a></li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <a class="btn btn-ms-login px-4 py-2" href="/TaiKhoan/DangNhap">Đăng Nhập</a>
+                            <a class="btn btn-ms-register px-4 py-2" href="/TaiKhoan/DangKy">Đăng Ký</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+
+    <footer class="border-top footer text-muted mt-5 py-4 bg-white shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold text-dark">MiniStop Việt Nam</span>
+                <span class="ms-2 small">&copy; 2026 - Bản quyền thuộc về MiniStop</span>
+            </div>
+            <div>
+                <a href="/Home/Privacy" class="text-muted text-decoration-none small me-3">Chính sách bảo mật</a>
+                <a href="#" class="text-muted text-decoration-none small">Điều khoản sử dụng</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        let typingTimer;
+        const typingInterval = 300; 
+        const inputTimKiem = document.getElementById('inputTimKiem');
+        const boxKetQua = document.getElementById('boxKetQuaTimKiem');
+        const searchForm = document.getElementById('searchForm');
+        
+        inputTimKiem.addEventListener('input', function () {
+            clearTimeout(typingTimer); 
+            const keyword = this.value.trim();
+
+            if (keyword.length === 0) {
+                boxKetQua.style.display = 'none';
+                return;
+            }
+
+            typingTimer = setTimeout(function () {
+                fetch(`/SanPham/TimKiemNhanh?keyword=${encodeURIComponent(keyword)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        boxKetQua.innerHTML = ''; 
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const theA = document.createElement('a');
+                                theA.className = 'dropdown-item d-flex justify-content-between align-items-center py-2 rounded text-wrap border-bottom';
+                                theA.href = `/SanPham/Index?keyword=${encodeURIComponent(item.tenSp)}`;
+
+                                let tenHienThi = item.tenSp;
+                                let formatGiaMoi = new Intl.NumberFormat('vi-VN').format(item.donGia) + 'đ';
+                                let htmlGia = `<span class="text-danger fw-bold small">${formatGiaMoi}</span>`;
+
+                                // Thuật toán: Nếu phát hiện tên có chữ XẢ KHO, tự động vẽ lại UI
+                                if (tenHienThi.includes("[XẢ KHO 50%]")) {
+                                    tenHienThi = tenHienThi.replace("[XẢ KHO 50%]", "<span class='badge bg-danger rounded-pill fw-bold me-1'>[GIẢM 50%]</span>");
+                                    let giaGoc = item.donGia * 2; // Nhân đôi lại để tìm giá gốc
+                                    let formatGiaCu = new Intl.NumberFormat('vi-VN').format(giaGoc) + 'đ';
+                                    htmlGia = `<del class="text-muted small me-2">${formatGiaCu}</del><span class="text-danger fw-bold small">${formatGiaMoi}</span>`;
+                                }
+
+                                theA.innerHTML = `
+                                    <span class="fw-bold text-dark text-truncate" style="max-width: 65%;">${tenHienThi}</span>
+                                    <div class="text-end">${htmlGia}</div>
+                                `;
+                                boxKetQua.appendChild(theA);
+                            });
+                            boxKetQua.innerHTML += `<div class="text-center mt-2"><a href="/SanPham/Index?keyword=${encodeURIComponent(keyword)}" class="text-primary small fw-bold text-decoration-none">Xem tất cả kết quả...</a></div>`;
+                        } else {
+                            boxKetQua.innerHTML = '<span class="dropdown-item text-muted small text-center py-2">Không tìm thấy món ăn này...</span>';
+                        }
+                        boxKetQua.style.display = 'block';
+                    });
+            }, typingInterval);
+        });
+
+        searchForm.addEventListener('submit', function (e) {
+            const keyword = inputTimKiem.value.trim();
+            if (keyword.length === 0) { e.preventDefault(); }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!inputTimKiem.contains(event.target) && !boxKetQua.contains(event.target)) {
+                boxKetQua.style.display = 'none';
+            }
+        });
+    </script>
+
+    @* ========================================================================= *@
+    @* DÒNG LỆNH QUAN TRỌNG NHẤT ĐỂ FIX LỖI (BẮT BUỘC PHẢI NẰM Ở ĐÂY) *@
+    @RenderSection("Scripts", required: false)
+    @* ========================================================================= *@
+
+    @* CHỈ TẢI PHẦN CHATBOT NẾU LÀ KHÁCH HÀNG (KHÔNG PHẢI ADMIN) *@
+    @if (Context.Session.GetString("Admin_MaNV") == null)
+    {
+        @await Html.PartialAsync("_ChatBotPartial")
+    }
+</body>
+</html>

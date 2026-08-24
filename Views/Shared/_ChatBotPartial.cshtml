@@ -1,0 +1,307 @@
+@using Microsoft.AspNetCore.Http
+
+<style>
+    /* Nút bong bóng chat */
+    #ms-chat-btn { position: fixed; bottom: 20px; right: 20px; background-color: #0033a0; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 9999; transition: 0.3s; }
+    #ms-chat-btn:hover { transform: scale(1.1); background-color: #ffc107; color: #0033a0; }
+    
+    /* Khung cửa sổ chat */
+    #ms-chat-window { position: fixed; bottom: 90px; right: 20px; width: 350px; height: 480px; background: white; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; z-index: 9999; border: 1px solid #eee; }
+    
+    /* Header chat */
+    .ms-chat-header { background: #0033a0; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 4px solid #ffc107; }
+    .ms-chat-close { cursor: pointer; font-size: 1.2rem; }
+    .ms-chat-close:hover { color: #ffc107; }
+
+    /* Nội dung tin nhắn */
+    .ms-chat-body { flex-grow: 1; padding: 15px; overflow-y: auto; background-color: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
+    .ms-msg { max-width: 85%; padding: 10px 15px; border-radius: 15px; font-size: 0.95rem; line-height: 1.5; }
+    .ms-msg.bot { background: #e9ecef; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .ms-msg.user { background: #0033a0; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+    /* Khu vực nhập text */
+    .ms-chat-footer { padding: 12px; background: white; border-top: 1px solid #ddd; display: flex; gap: 8px; align-items: center; }
+    .ms-chat-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 20px; padding: 10px 15px; outline: none; font-size: 0.95rem; }
+    .ms-chat-input:focus { border-color: #0033a0; }
+    .ms-chat-send { background: #ffc107; color: #0033a0; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-size: 1.1rem; flex-shrink: 0; }
+    .ms-chat-send:hover { background: #0033a0; color: white; }
+
+    .typing-indicator { display: none; align-self: flex-start; color: #888; font-style: italic; font-size: 0.85rem; margin-top: -5px; }
+
+    /* BONG BÓNG LỜI CHÀO */
+    .ms-chat-tooltip { position: fixed; bottom: 35px; right: 95px; background-color: white; color: #0033a0; padding: 12px 18px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-size: 0.95rem; font-weight: bold; z-index: 9998; border: 2px solid #ffc107; cursor: pointer; opacity: 0; transform: translateY(10px); animation: fadeInTooltip 0.5s forwards 1.5s, bounce 2s infinite 2s; }
+    .ms-chat-tooltip::after { content: ''; position: absolute; top: 50%; right: -9px; transform: translateY(-50%); border-width: 8px 0 8px 8px; border-style: solid; border-color: transparent transparent transparent #ffc107; }
+
+    @@keyframes fadeInTooltip { to { opacity: 1; transform: translateY(0); } }
+    @@keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-6px); }
+        60% { transform: translateY(-3px); }
+    }
+</style>
+
+<div id="ms-chat-tooltip" onclick="toggleChat()">
+    👋 Xin chào! Cần hỗ trợ cứ chat với mình nhé!
+</div>
+
+<div id="ms-chat-btn" onclick="toggleChat()">
+    <i class="fa-solid fa-robot"></i>
+    <span id="customer-unread-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="display: none; font-size: 0.75rem; transform: translate(-30%, 30%) !important;">
+        0
+    </span>
+</div>
+
+<div id="ms-chat-window">
+    <div class="ms-chat-header">
+        <span><i class="fa-solid fa-headset me-2"></i> Trợ Lý MiniStop</span>
+        <span class="ms-chat-close" onclick="toggleChat()"><i class="fa-solid fa-xmark"></i></span>
+    </div>
+    
+    <div id="admin-mode-banner" style="display: none; background: #ffc107; color: #0033a0; padding: 5px; text-align: center; font-weight: bold; font-size: 0.85rem;">
+        <span>Đang kết nối với nhân viên...</span>
+        <button onclick="ketThucChatAdmin()" class="btn btn-sm btn-danger ms-2" style="font-size: 0.7rem; padding: 2px 5px;">
+            <i class="fa-solid fa-power-off"></i> Kết thúc
+        </button>
+    </div>
+    <div id="admin-mode-btn-container" style="text-align: center; padding: 5px; background: #f8f9fa; border-top: 1px solid #ddd;">
+        <button class="btn btn-sm btn-outline-danger rounded-pill fw-bold" onclick="chuyenSangChatAdmin()">
+            <i class="fa-solid fa-headset"></i> Chuyển sang Chat với Nhân viên
+        </button>
+    </div>
+
+    <div class="ms-chat-body" id="chat-body">
+        <div class="ms-msg bot" id="default-greeting">Xin chào! Mình là AI hỗ trợ của MiniStop. Bụng bạn đang đói râm ran rồi đúng không, mình có thể giúp gì cho bạn?</div>
+        <div class="typing-indicator" id="typing-indicator">AI đang gõ...</div>
+    </div>
+
+    <div class="ms-chat-footer">
+        <input type="text" id="chat-input" class="ms-chat-input" placeholder="Nhập câu hỏi..." onkeypress="handleEnter(event)">
+        <button class="ms-chat-send" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+    let chatHistory = JSON.parse(sessionStorage.getItem('msChatHistory')) || [];
+    let isChatAdminMode = sessionStorage.getItem('isChatAdminMode') === 'true'; 
+    let loadTinNhanInterval = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if (isChatAdminMode) {
+            chuyenSangChatAdmin(true); 
+        } else if (chatHistory.length > 0) {
+            var chatBody = document.getElementById("chat-body");
+            var typingIndicator = document.getElementById("typing-indicator");
+            chatHistory.forEach(item => {
+                var msgDiv = document.createElement("div");
+                msgDiv.className = item.role === "user" ? "ms-msg user" : "ms-msg bot";
+                msgDiv.innerHTML = item.parts[0].text.replace(/\n/g, '<br>');
+                chatBody.insertBefore(msgDiv, typingIndicator);
+            });
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+    });
+
+    function toggleChat() {
+        var chatWindow = document.getElementById("ms-chat-window");
+        var tooltip = document.getElementById("ms-chat-tooltip");
+        if (chatWindow.style.display === "none" || chatWindow.style.display === "") {
+            chatWindow.style.display = "flex";
+            if (tooltip) tooltip.style.display = "none"; 
+            document.getElementById("chat-input").focus();
+        } else {
+            chatWindow.style.display = "none";
+            if (tooltip) tooltip.style.display = "block"; 
+        }
+    }
+
+    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+
+    function chuyenSangChatAdmin(isReload = false) {
+        let maKh = '@Context.Session.GetString("MaKh")';
+        if (!maKh && !isReload) {
+            alert("Bạn cần đăng nhập tài khoản để chat với Nhân viên hỗ trợ!");
+            window.location.href = '/TaiKhoan/DangNhap';
+            return;
+        }
+
+        isChatAdminMode = true;
+        sessionStorage.setItem('isChatAdminMode', 'true');
+        
+        document.getElementById('admin-mode-banner').style.display = 'block';
+        document.getElementById('admin-mode-btn-container').style.display = 'none'; 
+        
+        var chatBody = document.getElementById("chat-body");
+        
+        if (!isReload) {
+            var notifMsg = document.createElement("div");
+            notifMsg.className = "ms-msg bot";
+            notifMsg.style.backgroundColor = "#ffc107";
+            notifMsg.innerHTML = "<b>Hệ thống:</b> <i>Đã ghi nhận yêu cầu. Xin vui lòng chờ trong giây lát, nhân viên sẽ phản hồi bạn ngay tại đây!</i>";
+            chatBody.insertBefore(notifMsg, document.getElementById("typing-indicator"));
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // Bắn tin nhắn báo chuông cho Admin
+            fetch('/Chat/GuiTinNhanAdmin?message=' + encodeURIComponent("🔔 Khách hàng đang yêu cầu hỗ trợ!"), { method: 'POST' });
+        }
+
+        if (!loadTinNhanInterval) {
+            loadTinNhanInterval = setInterval(taiTinNhanAdmin, 3000);
+            taiTinNhanAdmin(); 
+        }
+    }
+
+    async function taiTinNhanAdmin() {
+        if (!isChatAdminMode) return;
+        try {
+            let response = await fetch('/Chat/LayTinNhanKhachHang');
+            let data = await response.json();
+            
+            var chatBody = document.getElementById("chat-body");
+            var typingIndicator = document.getElementById("typing-indicator");
+            
+            Array.from(chatBody.children).forEach(child => {
+                if (child.id !== 'typing-indicator') chatBody.removeChild(child);
+            });
+
+            data.forEach(item => {
+                var msgDiv = document.createElement("div");
+                msgDiv.className = item.isAdmin ? "ms-msg bot" : "ms-msg user";
+                if (item.isAdmin) {
+                    msgDiv.style.backgroundColor = "#fff3cd"; 
+                    msgDiv.style.border = "1px solid #ffce3a";
+                }
+                msgDiv.innerText = item.message;
+                chatBody.insertBefore(msgDiv, typingIndicator);
+            });
+            chatBody.scrollTop = chatBody.scrollHeight;
+        } catch (error) { console.error("Lỗi tải tin nhắn SQL:", error); }
+    }
+
+    async function sendMessage() {
+        var inputField = document.getElementById("chat-input");
+        var message = inputField.value.trim();
+        if (message === "") return;
+
+        var chatBody = document.getElementById("chat-body");
+        var typingIndicator = document.getElementById("typing-indicator");
+        
+        var userMsg = document.createElement("div");
+        userMsg.className = "ms-msg user";
+        userMsg.innerText = message;
+        chatBody.insertBefore(userMsg, typingIndicator);
+        inputField.value = "";
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        if (isChatAdminMode) {
+            try {
+                await fetch('/Chat/GuiTinNhanAdmin?message=' + encodeURIComponent(message), { method: 'POST' });
+                taiTinNhanAdmin(); 
+            } catch (error) { console.error("Lỗi gửi tin nhắn SQL:", error); }
+        } else {
+            typingIndicator.style.display = "block";
+            chatHistory.push({ role: "user", parts: [{ text: message }] });
+            sessionStorage.setItem('msChatHistory', JSON.stringify(chatHistory));
+
+            try {
+                let response = await fetch('/Chat/GetResponse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ History: chatHistory })
+                });
+                let data = await response.json();
+                
+                typingIndicator.style.display = "none";
+                var botMsg = document.createElement("div");
+                botMsg.className = "ms-msg bot";
+                botMsg.innerHTML = data.reply.replace(/\n/g, '<br>');
+                chatBody.insertBefore(botMsg, typingIndicator);
+                chatBody.scrollTop = chatBody.scrollHeight;
+
+                chatHistory.push({ role: "model", parts: [{ text: data.reply }] });
+                sessionStorage.setItem('msChatHistory', JSON.stringify(chatHistory));
+            } catch (error) {
+                typingIndicator.style.display = "none";
+                alert("Lỗi kết nối đến máy chủ AI!");
+                chatHistory.pop();
+                sessionStorage.setItem('msChatHistory', JSON.stringify(chatHistory));
+            }
+        }
+    }
+
+    function ketThucChatAdmin() {
+        isChatAdminMode = false;
+        sessionStorage.removeItem('isChatAdminMode');
+        
+        if (loadTinNhanInterval) {
+            clearInterval(loadTinNhanInterval);
+            loadTinNhanInterval = null;
+        }
+
+        document.getElementById('admin-mode-banner').style.display = 'none';
+        document.getElementById('admin-mode-btn-container').style.display = 'block';
+
+        var chatBody = document.getElementById("chat-body");
+        var typingIndicator = document.getElementById("typing-indicator");
+        
+        Array.from(chatBody.children).forEach(child => {
+            if (child.id !== 'typing-indicator') chatBody.removeChild(child);
+        });
+
+        var defaultMsg = document.createElement("div");
+        defaultMsg.className = "ms-msg bot";
+        defaultMsg.innerHTML = "Đã ngắt kết nối với nhân viên. Trợ lý AI đã quay trở lại, bạn cần giúp gì thêm không?";
+        chatBody.insertBefore(defaultMsg, typingIndicator);
+
+        chatHistory.forEach(item => {
+            var msgDiv = document.createElement("div");
+            msgDiv.className = item.role === "user" ? "ms-msg user" : "ms-msg bot";
+            msgDiv.innerHTML = item.parts[0].text.replace(/\n/g, '<br>');
+            chatBody.insertBefore(msgDiv, typingIndicator);
+        });
+        
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+    function toggleChat() {
+        var chatWindow = document.getElementById("ms-chat-window");
+        var tooltip = document.getElementById("ms-chat-tooltip");
+        if (chatWindow.style.display === "none" || chatWindow.style.display === "") {
+            chatWindow.style.display = "flex";
+            if (tooltip) tooltip.style.display = "none"; 
+            document.getElementById("chat-input").focus();
+            
+            // XÓA SỐ THÔNG BÁO VÀ ĐÁNH DẤU ĐÃ ĐỌC
+            document.getElementById("customer-unread-badge").style.display = "none";
+            if (isChatAdminMode) fetch('/Chat/DanhDauDaDoc', { method: 'POST' });
+
+        } else {
+            chatWindow.style.display = "none";
+            if (tooltip) tooltip.style.display = "block"; 
+        }
+    }
+    // Cứ 3 giây hỏi Server xem Admin có nhắn gì không
+    setInterval(async () => {
+        if (isChatAdminMode) {
+            let chatWindow = document.getElementById("ms-chat-window");
+            // Chỉ báo chấm đỏ khi khung chat đang ĐÓNG
+            if (chatWindow.style.display === "none" || chatWindow.style.display === "") {
+                try {
+                    let res = await fetch('/Chat/DemTinNhanChuaDoc');
+                    let data = await res.json();
+                    let badge = document.getElementById("customer-unread-badge");
+                    if (data.count > 0) {
+                        badge.innerText = data.count > 9 ? "9+" : data.count;
+                        badge.style.display = "block";
+                        
+                        // Đổi màu nút chat sang đỏ để gây chú ý
+                        document.getElementById("ms-chat-btn").style.backgroundColor = "#e31837";
+                    }
+                } catch (e) {}
+            } else {
+                // Nếu đang MỞ thì tự động tải tin nhắn và đánh dấu đã đọc
+                taiTinNhanAdmin();
+                fetch('/Chat/DanhDauDaDoc', { method: 'POST' });
+                document.getElementById("ms-chat-btn").style.backgroundColor = "#0033a0";
+            }
+        }
+    }, 3000);
+</script>
